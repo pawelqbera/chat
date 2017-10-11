@@ -66,10 +66,55 @@
 		}
 	};
 
-	const bindEvents = function() {
-		document.addEventListener("keypress", function(e) {
-			var input = chatView.getMessageInput();
+	function Chat(userId) {
+		this.userId = userId;
+	}
 
+	Chat.prototype.getMessageInput = function() {
+		return document.querySelector('#chat-input-a');
+	};
+		
+	Chat.prototype.renderChatWindow = function(userId) {
+		var chatMessages = chatController.getChatMessages('a');
+		var html = '';
+
+		html += '<div class="chat-window chat-window-' + userId + '">';
+		html += '	<div class="chat-recipient">dasdsadas</div>';
+		html += '	<div class="chat-messages">' + this.renderChatMessages(chatMessages) + '</div>';
+		html += '	<input type="text" id="chat-input-' + userId + '" class="chat-input"/>';
+		html += '</div>';
+
+		document.body.innerHTML += html;
+	};
+	
+	Chat.prototype.renderMessage = function(message) {
+		var sender = chatController.getUserById(message.userId);
+		var date = message.createDate;
+		var html = '';
+
+		html += '<div class="message">';
+		html += '	<p class="message-sender">' + sender.name + '</p>';
+		html += '	<p class="message-content">'+ message.message + '</p>';
+		html += '	<p class="message-date">On: '+ date + '</p>';
+		html += '</div>';
+
+		return html;
+	};
+
+	Chat.prototype.renderChatMessages = function(messages) {
+		var html = '';
+		var _this = this;
+
+		messages.forEach(function(message) {
+			html += '<div>' + this.renderMessage(message) + '</div>';	
+		}, _this);
+
+		return html;
+	};
+		
+	Chat.prototype.bindEvents = function() {
+		document.addEventListener("keypress", function(e) {
+			var input = this.getMessageInput();
 			messageSendHandle(e);
 		}, false);
 
@@ -91,65 +136,51 @@
 				chatController.setMessage(message);
 			}
 		}
-	};
+	}
 
-	const chatView = {
-		getMessageInput: function() {
-			return document.querySelector('#chat-input-a');
-		},
-		renderChatWindow: function(userId) {
-			var chatMessages = chatController.getChatMessages('a');
-			var html = '';
+	Chat.prototype.render = function() {
+		this.renderChatWindow(this.userId);
+	}
+	
+	Chat.prototype.init = function() {
+		this.render();
+		this.bindEvents();
+	}
 
-			html += '<div class="chat-window chat-window-' + userId + '">';
-			html += '	<div class="chat-recipient">dasdsadas</div>';
-			html += '	<div class="chat-messages">' + this.renderChatMessages(chatMessages) + '</div>';
-			html += '	<input type="text" id="chat-input-' + userId + '" class="chat-input"/>';
-			html += '</div>';
-
-			document.body.innerHTML += html;
-		},
-		renderMessage: function(message) {
-			var sender = chatController.getUserById(message.userId);
-			var date = message.createDate;
-			var html = '';
-
-			html += '<div class="message">';
-			html += '	<p class="message-sender">' + sender.name + '</p>';
-			html += '	<p class="message-content">'+ message.message + '</p>';
-			html += '	<p class="message-date">On: '+ date + '</p>';
-			html += '</div>';
-
-			return html;
-		},
-		renderChatMessages: function(messages) {
-			var html = '';
+	const Chats = {
+		chatWindows: [],
+		create: function() {
+			var users = model.users;
 			var _this = this;
 
-			messages.forEach(function(message) {
-				html += '<div>' + this.renderMessage(message) + '</div>';	
-			}, _this);
+			users.forEach(function(user) {				
+				_this.chatWindows.push(new Chat(user.id));
+				_this.render(user.id);	
+			});
 
-			return html;
+			console.log(this.chatWindows);
 		},
-		render: function() {
-			// TODO: zamienić na render chat windows
-			this.renderChatWindow('a');
-			this.renderChatWindow('b');
-		}
-	};
+		render: function(userId) {
+			var _this = this;
 
-	const chat = {
+			_this.chatWindows.forEach(function(chatWindow) {
+				chatWindow.render();
+			});
+		},
+		init: function() {
+			this.create();
+		}
+	}
+
+	const chatApp = {
 		init: function() {
 			this.render();
-			bindEvents();
 		},
 		render: function() {
-			chatView.render();
+			Chats.init();
 		}
 	};
 
-	chat.init();
-
+	chatApp.init();
 
 })(window);
