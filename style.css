@@ -2,11 +2,17 @@
 	box-sizing: border-box;
 }
 
+.chat-container {
+	position: absolute;
+	bottom: 0;
+}
+
 .chat-window {
     width: 300px;
     height: 300px;
-    position: absolute;
-    bottom: 0;
+    position: relative;
+    float: left;
+    margin-left: 64px;
 }
 
 .chat-recipient {
@@ -20,14 +26,6 @@
 	background: #666;
 	color: #fff;
 }
-
-	.chat-window-a {
-		left: 100px;
-	}
-
-	.chat-window-b {
-		right: 100px;
-	}
 
 .chat-messages {
 	float: left;
@@ -52,6 +50,8 @@
 .message-content {
 	width: 100%;
 	margin-bottom: 8px;
+	word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .message-date {
