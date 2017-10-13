@@ -12,19 +12,19 @@
 	//BUGI:
 	// - pierwsze okno czatu tworzy się 2 razy //DONE
 	// - event listener wywoluje sie trzy razy // DONE
-	// - poprawne synchro nowych wiadomosci między oknami
-	// - poprawne wyswietlanie sender nameow (wszędzie jest johnny)
+	// - poprawne synchro nowych wiadomosci między oknami //DONE
+	// - poprawne wyswietlanie sender nameow (wszędzie jest johnny) // DONE
 
-	// dodać bazę z session storage
+	// dodać bazę z session storage // DONE
+	// dodać API, wystawić API z metodą dodawania usera na zewnątrz // DONE
+	// wystawić metodę dodawania chatu na zewnątrz
 
 	const model = {
 		chatStorage: localStorage,
-		chats: [
-			{
-				id: 'a',
-			}
-		],
 		//Local Storage API
+		fetchChatsFromStorage: function() {
+			return JSON.parse(this.chatStorage.getItem('chats')) || [];
+		},
 		fetchMessagesFromStorage: function() {
 			return JSON.parse(this.chatStorage.getItem('messages')) || [];
 		},
@@ -36,9 +36,18 @@
 		},
 		setUsersToStorage: function(users) {
 			this.chatStorage.setItem('users', JSON.stringify(users));
+		},		
+		setChatsToStorage: function(chats) {
+			this.chatStorage.setItem('chats', JSON.stringify(chats));
 		},
 
 		// Model API
+		getChats: function() {
+			var chatData = this.fetchChatsFromStorage();
+			var chats = chatData ? chatData : [];
+
+			return chats;
+		},
 		setMessage: function(message) {
 			var messageData = this.fetchMessagesFromStorage();
 
@@ -64,21 +73,41 @@
 
 			return userData.find(function(user) {
 				return user.id === userId;
-			})
+			});
 		},
 		setUser: function(name) {
 			var userData = this.fetchUsersFromStorage();
 			var user = {
 				id: userData.length,
 				name: name
-			}
+			};
 
 			userData.push(user);
 			this.setUsersToStorage(userData);
+		},
+		setChat: function(userId, recipientId) {
+			var chatData = this.fetchChatsFromStorage();
+			var chat = {
+				id: chatData.length,
+				userId: userId,
+				recipientId: recipientId,
+			};
+
+			chatData.push(chat);
+			this.setChatsToStorage(chatData);
+		},
+		deleteChat: function(chatId) {
+			var chatData = this.fetchChatsFromStorage();
+
+			chatData.splice(chatId, 1);
+			this.setChatsToStorage(chatData);
 		}
 	};
 
 	const chatController = {
+		fetchChats: function() {
+			return model.getChats();
+		},
 		fetchChatMessages: function(chatId) {
 			return model.getMessages(chatId);
 		},
@@ -93,20 +122,29 @@
 		},
 		addUser: function(name) {
 			model.setUser(name); 
+		},
+		addChat: function(userId, recipientId) {
+			model.setChat(userId, recipientId);
+			view.render();
+		},
+		removeChat: function(chatId) {
+			model.deleteChat(chatId);
+			view.render();
 		}
 	};
 
-	function Chat(userId, recipientId) {
-		this.userId = userId;
-		this.recipientId = recipientId;
+	function Chat(chat) {
+		this.chatId = chat.id;
+		this.userId = chat.userId;
+		this.recipientId = chat.recipientId;
 	}
 
 	Chat.prototype.getMessageInput = function() {
 		return document.querySelector('#chat-input-' + this.userId);
 	};
 		
-	Chat.prototype.renderChatWindow = function(userId, recipientId) {
-		var chatMessages = chatController.fetchChatMessages('a');
+	Chat.prototype.renderChatWindow = function() {
+		var chatMessages = chatController.fetchChatMessages(this.chatId);
 		var html = '';
 		var chatContainer = document.getElementById("chat-container") ? document.getElementById("chat-container") : createChatContainer();
 
@@ -118,10 +156,11 @@
 			return node;
 		}
 
-		html += '<div class="chat-window chat-window-' + userId + '">';
-		html += '	<div class="chat-recipient">' + chatController.fetchUserById(recipientId).name + '</div>';
-		html += '	<div class="chat-messages" id="chat-messages-' + userId + '">' + this.buildMessages(chatMessages) + '</div>';
-		html += '	<input type="text" id="chat-input-' + userId + '" class="chat-input"/>';
+		html += '<div class="chat-window chat-window-' + this.userId + '">';
+		html += '	<div class="chat-recipient">' + chatController.fetchUserById(this.recipientId).name + '</div>';
+		html += '	<div class="chat-messages" id="chat-messages-' + this.userId + '">' + this.buildMessages(chatMessages) + '</div>';
+		html += '	<input type="text" id="chat-input-' + this.userId + '" class="chat-input"/>';
+		html += '	<div class="chat-window-sender">Message Sender: <strong>' + chatController.fetchUserById(this.userId).name + '</strong></div>';
 		html += '</div>';
 
 		chatContainer.innerHTML += html;
@@ -165,7 +204,7 @@
 			var input = document.querySelector('#chat-input-' + _this.userId);
 			var key = e.which || e.keyCode;
 			var message = {
-				chatId: model.chats[0].id,
+				chatId: _this.chatId,
 				senderId: _this.userId,
 				recipientId: _this.recipientId,
 				createDate: new Date(),
@@ -194,7 +233,7 @@
 
 	Chat.prototype.render = function() {
 		console.log('wywoluje redner okna dla sendera: ' + this.userId + ' i odbiorcy: ' + this.recipientId);
-		this.renderChatWindow(this.userId, this.recipientId);		
+		this.renderChatWindow();		
 	};
 	
 	Chat.prototype.init = function() {
@@ -202,14 +241,18 @@
 		this.bindEvents();
 	};
 
-	const Chats = {
+	const view = {
 		chatWindows: [],
 		create: function() {
-			var users = chatController.fetchUsers();
+			var chats = chatController.fetchChats();
 			var _this = this;
 
-			users.forEach(function(user, index) {	
-				_this.chatWindows.push(new Chat(user.id, 0));	
+			chats.forEach(function(chat) {
+				if(!_this.chatWindows[chat.id]) {
+					//dodac sprawdzanie czy w chat windows istnieja juz pobrane czaty po id
+					_this.chatWindows.push(new Chat(chat));					
+				}
+
 			});
 
 			this.render();
@@ -228,7 +271,7 @@
 
 	const chatApp = {
 		init: function() {
-			Chats.init();
+			view.init();
 		}
 	};
 
@@ -236,5 +279,8 @@
 
 	// API
 	window.addUser = chatController.addUser;
+	window.addChat = chatController.addChat;
+	window.removeChat = chatController.removeChat;
+	window.chatWindows = view.chatWindows;
 
 })(window);

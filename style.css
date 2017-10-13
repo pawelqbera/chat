@@ -2,7 +2,7 @@
 	box-sizing: border-box;
 }
 
-.chat-container {
+#chat-container {
 	position: absolute;
 	bottom: 0;
 }
@@ -13,6 +13,11 @@
     position: relative;
     float: left;
     margin-left: 64px;
+}
+
+.chat-window-sender {
+	font-size: 14px;
+	float: left;
 }
 
 .chat-recipient {
