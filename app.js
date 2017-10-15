@@ -17,7 +17,9 @@
 
 	// dodać bazę z session storage // DONE
 	// dodać API, wystawić API z metodą dodawania usera na zewnątrz // DONE
-	// wystawić metodę dodawania chatu na zewnątrz
+	// wystawić metodę dodawania chatu na zewnątrz // DONE
+	// dodać scroll to Botoom, gdy render i nowa wiadomosc // DONE
+
 
 	const model = {
 		chatStorage: localStorage,
@@ -148,14 +150,6 @@
 		var html = '';
 		var chatContainer = document.getElementById("chat-container") ? document.getElementById("chat-container") : createChatContainer();
 
-		function createChatContainer() {
-			var node = document.createElement("div");
-			node.setAttribute("id", "chat-container");
-			document.body.appendChild(node);
-
-			return node;
-		}
-
 		html += '<div class="chat-window chat-window-' + this.userId + '">';
 		html += '	<div class="chat-recipient">' + chatController.fetchUserById(this.recipientId).name + '</div>';
 		html += '	<div class="chat-messages" id="chat-messages-' + this.userId + '">' + this.buildMessages(chatMessages) + '</div>';
@@ -164,6 +158,15 @@
 		html += '</div>';
 
 		chatContainer.innerHTML += html;
+		this.scrollToBottom();
+
+		function createChatContainer() {
+			var node = document.createElement("div");
+			node.setAttribute("id", "chat-container");
+			document.body.appendChild(node);
+
+			return node;
+		}
 	};
 	
 	Chat.prototype.buildMessage = function(message) {
@@ -225,15 +228,23 @@
 		}
 	};
 
+	Chat.prototype.scrollToBottom = function() {
+		var chatMessages = document.getElementById("chat-messages-" + this.userId);
+		return chatMessages.scrollTop = chatMessages.scrollHeight;
+	}
+
 	Chat.prototype.renderNewMessage = function(message) {
 		var node = document.createElement("div");
 		node.innerHTML = '<div>' + this.buildMessage(message) + '</div>';
 		document.getElementById('chat-messages-' + this.userId).appendChild(node);
+
+		this.scrollToBottom();
 	}
 
 	Chat.prototype.render = function() {
 		console.log('wywoluje redner okna dla sendera: ' + this.userId + ' i odbiorcy: ' + this.recipientId);
-		this.renderChatWindow();		
+
+		this.renderChatWindow();	
 	};
 	
 	Chat.prototype.init = function() {
@@ -243,29 +254,39 @@
 
 	const view = {
 		chatWindows: [],
-		create: function() {
+		render: function(userId) {
 			var chats = chatController.fetchChats();
 			var _this = this;
 
-			chats.forEach(function(chat) {
-				if(!_this.chatWindows[chat.id]) {
-					//dodac sprawdzanie czy w chat windows istnieja juz pobrane czaty po id
-					_this.chatWindows.push(new Chat(chat));					
-				}
-
+			// sprawdzenie czy 
+			this.chatWindows.forEach(chatWindow => {
+				chats.forEach(chat => {
+					if (chatWindow.chatId === chat.id) {
+						console.log('splicuje');
+						chats.splice(chatWindow.id, 1);
+					}
+				});
+				chatWindow.init();
 			});
 
-			this.render();
-		},
-		render: function(userId) {
-			var _this = this;
+			console.log('powinny byc wywalone chats: ');
+			console.log(chats);
 
-			_this.chatWindows.forEach(function(chatWindow) {
+			chats.forEach(function(chat) {
+				console.log('nowa instacja' + chat);
+				_this.chatWindows.push(new Chat(chat));
+			});
+
+			// render ale tylko te co nie są już rendered
+
+			// render chat windows for instantiated Chat objects
+			this.chatWindows.forEach(function(chatWindow) {
+				console.log('init');
 				chatWindow.init();
 			});
 		},
 		init: function() {
-			this.create();
+			this.render();
 		}
 	};
 
